@@ -1,0 +1,83 @@
+package com.advanced.utilities;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+/**
+ * A utility for scheduling and managing concurrent tasks.
+ * * Demonstrates: Concurrency Utilities (ExecutorService, Callable, Future, TimeUnit).
+ */
+public class TaskScheduler {
+
+    private final ExecutorService executor;
+    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    
+    // Use a fixed-size thread pool for predictable resource management
+    public TaskScheduler(int poolSize) {
+        this.executor = Executors.newFixedThreadPool(poolSize);
+        System.out.printf("[SCHEDULER] Initialized with a fixed pool size of %d threads.%n", poolSize);
+    }
+
+    /**
+     * Submits a value-returning task and returns a Future object.
+     * @param name The name of the task.
+     * @param durationSeconds The duration (simulation time) of the task.
+     * @return A Future object to retrieve the result.
+     */
+    public Future<String> submitTask(String name, int durationSeconds) {
+        
+        // Using Callable (functional interface) and a Lambda expression for the task logic
+        Callable<String> task = () -> {
+            log("Starting task...", name);
+            try {
+                // Simulate work
+                TimeUnit.SECONDS.sleep(durationSeconds); 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return String.format("%s was interrupted.", name);
+            }
+            log("Finished task.", name);
+            return String.format("SUCCESS: %s completed its work in %d seconds.", name, durationSeconds);
+        };
+
+        // Submitting the task to the ExecutorService
+        return executor.submit(task);
+    }
+    
+    /**
+     * Gracefully shuts down the ExecutorService.
+     */
+    public void shutdown() {
+        System.out.println("\n[SCHEDULER] Attempting graceful shutdown...");
+        executor.shutdown(); // Initiates shutdown
+        try {
+            // Wait a limited amount of time for existing tasks to terminate
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                executor.shutdownNow(); // Cancel currently executing tasks
+                // Wait a bit longer for tasks to respond to cancellation
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    System.err.println("[SCHEDULER] Pool did not terminate.");
+                }
+            }
+        } catch (InterruptedException ie) {
+            // Re-cancel if current thread is interrupted
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        System.out.println("[SCHEDULER] Shutdown complete.");
+    }
+    
+    private void log(String message, String taskName) {
+        System.out.printf("[%s | %s] %s%n", 
+            LocalTime.now().format(timeFormatter), 
+            taskName, 
+            message);
+    }
+}
