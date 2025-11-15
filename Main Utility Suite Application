@@ -1,0 +1,131 @@
+package com.advanced.utilities;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * The main driver class for the Comprehensive Utility Suite.
+ * Demonstrates the integration of advanced Java utilities.
+ */
+public class UtilitySuite {
+    
+    // Sample text data for the TextProcessor demonstration
+    private static final String SAMPLE_TEXT = 
+        "The quick brown fox jumps over the lazy dog. The quick fox " +
+        "is quick. Dog is lazy. Fox and dog, fox and dog.";
+
+    public static void main(String[] args) {
+        System.out.println("=================================================");
+        System.out.println("  COMPREHENSIVE UTILITY SUITE (Advanced Java Demo)");
+        System.out.println("=================================================");
+
+        // 1. CONCURRENT TASK SCHEDULER DEMO
+        System.out.println("\n--- DEMO 1: Concurrent Task Scheduler (java.util.concurrent) ---");
+        runTaskSchedulerDemo();
+
+        // 2. TEXT PROCESSOR DEMO
+        System.out.println("\n--- DEMO 2: Stream API and NIO.2 Text Processor ---");
+        runTextProcessorDemo();
+
+        // 3. REFLECTION AND ANNOTATION DEMO
+        System.out.println("\n--- DEMO 3: Reflection and Custom Annotation ---");
+        runDataSerializerDemo();
+    }
+
+    // =================================================================
+    // DEMO 1: CONCURRENT TASK SCHEDULER (Concurrency Utilities)
+    // =================================================================
+    private static void runTaskSchedulerDemo() {
+        // Initialize scheduler with 2 threads
+        TaskScheduler scheduler = new TaskScheduler(2);
+        
+        // Submit tasks with varying durations
+        Future<String> task1 = scheduler.submitTask("DataFetcher", 3);
+        Future<String> task2 = scheduler.submitTask("ReportGen", 5);
+        Future<String> task3 = scheduler.submitTask("Indexer", 1);
+        
+        List<Future<String>> futures = List.of(task1, task2, task3);
+        
+        // Main thread waits for results
+        try {
+            System.out.println("Main thread waiting for results from concurrent tasks...");
+            for (Future<String> future : futures) {
+                // Future.get() blocks until the result is available.
+                // Using a timeout (advanced usage) to prevent infinite wait.
+                String result = future.get(6, TimeUnit.SECONDS); 
+                System.out.println("[RESULT] " + result);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (java.util.concurrent.ExecutionException e) {
+            System.err.println("Task execution failed: " + e.getCause().getMessage());
+        } catch (java.util.concurrent.TimeoutException e) {
+            System.err.println("One or more tasks timed out and were cancelled.");
+        } finally {
+            scheduler.shutdown();
+        }
+    }
+
+    // =================================================================
+    // DEMO 2: TEXT PROCESSOR (Stream API, NIO.2)
+    // =================================================================
+    private static void runTextProcessorDemo() {
+        TextProcessor processor = new TextProcessor();
+        Path tempFilePath = Path.of("sample_data.txt");
+        
+        try {
+            // Write sample text to a temporary file using NIO.2 (Files.writeString)
+            Files.writeString(tempFilePath, SAMPLE_TEXT);
+            System.out.println("[NIO.2] Wrote sample data to: " + tempFilePath.getFileName());
+
+            // Get frequencies using the Stream API
+            Map<String, Long> frequencies = processor.getWordFrequency(tempFilePath);
+            
+            // Get and display the top 5 words, demonstrating sorting with Stream API
+            Map<String, Long> topWords = processor.getTopWords(frequencies, 5);
+            
+            System.out.println("\nTop 5 Word Frequencies:");
+            topWords.forEach((word, count) -> System.out.printf("  - %-6s : %d%n", word, count));
+
+        } catch (IOException e) {
+            System.err.println("File I/O error during TextProcessor demo: " + e.getMessage());
+        } finally {
+            // Clean up the temporary file using NIO.2 (Files.deleteIfExists)
+            try {
+                Files.deleteIfExists(tempFilePath);
+                System.out.println("[NIO.2] Cleaned up sample file.");
+            } catch (IOException e) {
+                System.err.println("Cleanup failed: " + e.getMessage());
+            }
+        }
+    }
+
+    // =================================================================
+    // DEMO 3: DATA SERIALIZER (Reflection, Custom Annotations)
+    // =================================================================
+    private static void runDataSerializerDemo() {
+        DataSerializer serializer = new DataSerializer();
+        
+        // Create an instance of our record
+        DemoData userData = new DemoData("JVA-409", "Alice Smith");
+        
+        try {
+            // Serialize the object
+            Map<String, Object> serializedMap = serializer.serialize(userData);
+            
+            System.out.println("\nFinal Serialized Map (JSON-like output):");
+            System.out.println("========================================");
+            serializedMap.forEach((key, value) -> 
+                System.out.printf("'%s': '%s'%n", key, value));
+            System.out.println("========================================");
+
+        } catch (IllegalAccessException e) {
+            System.err.println("Error accessing fields via Reflection: " + e.getMessage());
+        }
+    }
+}
