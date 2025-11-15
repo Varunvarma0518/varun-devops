@@ -1,0 +1,83 @@
+package com.advanced.utilities;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Utility to perform advanced text processing using the Java Stream API and NIO.2.
+ * * Demonstrates: Stream API (flatMap, Collectors.groupingBy, counting, sorting),
+ * Functional Interfaces (Function, Comparator), NIO.2 (Files.lines).
+ */
+public class TextProcessor {
+
+    /**
+     * Reads a file and calculates the frequency of each word using the Stream API.
+     * @param filePath The path to the text file.
+     * @return A Map of word frequencies.
+     */
+    public Map<String, Long> getWordFrequency(Path filePath) throws IOException {
+        System.out.println("--- Using Stream API for High-Performance Text Analysis --- ");
+        
+        // Use try-with-resources with Files.lines() (NIO.2) to ensure the file stream is closed
+        try (Stream<String> lines = Files.lines(filePath)) {
+            
+            Map<String, Long> wordFrequencies = lines
+                // 1. flatMap: Flattens the stream of lines into a stream of words
+                .flatMap(line -> Stream.of(line.toLowerCase(Locale.ROOT).split("\\s+")))
+                
+                // 2. filter: Removes empty strings that result from multiple spaces
+                .filter(word -> !word.isEmpty())
+                
+                // 3. map: Cleans up punctuation from each word
+                .map(word -> word.replaceAll("[^a-z0-9]", ""))
+                
+                // 4. filter: Removes any words that became empty after cleaning
+                .filter(word -> !word.isEmpty())
+
+                // 5. Collectors.groupingBy and counting: The core of word frequency calculation
+                .collect(Collectors.groupingBy(
+                    // Key mapper: Use the word itself
+                    Function.identity(), 
+                    // Downstream collector: Count occurrences of each word
+                    Collectors.counting() 
+                ));
+            
+            System.out.printf("  Total unique words counted: %d%n", wordFrequencies.size());
+            return wordFrequencies;
+
+        } catch (IOException e) {
+            System.err.println("Error processing file: " + e.getMessage());
+            throw e;
+        }
+    }
+    
+    /**
+     * Sorts and limits the top N words from the frequency map.
+     */
+    public Map<String, Long> getTopWords(Map<String, Long> wordFrequencies, int limit) {
+        System.out.printf("  Filtering to top %d words...%n", limit);
+        
+        // Stream the Map entries for sorting
+        return wordFrequencies.entrySet().stream()
+                // 1. Sorting: Custom Comparator (functional interface) using comparingByValue descending
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                // 2. Limit: Takes only the top N entries
+                .limit(limit)
+                // 3. Collect: Puts the results back into a Map
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey, 
+                    Map.Entry::getValue, 
+                    // Merge function for safety (not typically needed here, but good practice)
+                    (e1, e2) -> e1, 
+                    // Use LinkedHashMap to preserve insertion order (the sorted order)
+                    java.util.LinkedHashMap::new 
+                ));
+    }
+}
