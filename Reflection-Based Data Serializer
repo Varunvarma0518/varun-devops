@@ -1,0 +1,58 @@
+package com.advanced.utilities;
+
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Utility to serialize an object into a custom key-value format using 
+ * Reflection and the custom @SerializableField annotation.
+ * * Demonstrates: Reflection API (Field access, Annotation checking).
+ */
+public class DataSerializer {
+
+    /**
+     * Serializes an object by inspecting fields annotated with @SerializableField.
+     * @param obj The object to serialize.
+     * @return A Map of key-value pairs representing the serialized fields.
+     */
+    public Map<String, Object> serialize(Object obj) throws IllegalAccessException {
+        System.out.println("--- Using Reflection to Inspect Object --- ");
+
+        // Map to hold the serialized data
+        Map<String, Object> serializedData = new HashMap<>();
+        
+        // Get the Class object of the input object
+        Class<?> clazz = obj.getClass();
+
+        // 1. Iterate over all declared fields in the class
+        for (Field field : clazz.getDeclaredFields()) {
+            
+            // 2. Check if the field is annotated with our custom annotation
+            if (field.isAnnotationPresent(SerializableField.class)) {
+                
+                // Make private fields accessible (crucial for Reflection)
+                field.setAccessible(true);
+                
+                // Get the annotation instance
+                SerializableField annotation = field.getAnnotation(SerializableField.class);
+                
+                // Determine the key name: use the annotation value or the field name
+                String key = annotation.keyName().isEmpty() ? field.getName() : annotation.keyName();
+                
+                // 3. Get the field's value using the Field object's get(obj) method
+                Object value = field.get(obj);
+                
+                serializedData.put(key, value);
+
+                System.out.printf("  [REFLECTED] Field: %-15s | Key: %-15s | Value: %s%n", 
+                                  field.getName(), key, value);
+            } else {
+                System.out.printf("  [IGNORED] Field: %s (No @SerializableField annotation)%n", field.getName());
+            }
+        }
+        
+        System.out.println("--- Serialization Complete ---");
+        return serializedData;
+    }
+}
