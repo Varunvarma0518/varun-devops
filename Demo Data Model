@@ -1,0 +1,21 @@
+package com.advanced.utilities;
+
+import java.time.LocalDate;
+
+/**
+ * A sample data class to demonstrate the use of the custom annotation 
+ * and Reflection-based serialization.
+ * * This class also uses 'record' (Java 16+) for concise, immutable data carriers.
+ */
+public record DemoData(
+    @SerializableField(keyName = "id_number") String userId,
+    @SerializableField String name,
+    @SerializableField LocalDate createdDate,
+    // Field without annotation will be ignored by DataSerializer
+    String internalHash
+) {
+    // Custom constructor for ease of use
+    public DemoData(String userId, String name) {
+        this(userId, name, LocalDate.now(), "hash-" + userId.hashCode());
+    }
+}
